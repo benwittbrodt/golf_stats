@@ -9,6 +9,9 @@ with open("golf-export.json") as data:
 
 clubs = golf_raw["clubs"]
 last10drive = golf_raw["last10DataDrive"]
+last10approach = golf_raw["last10DataApproach"]
+last10chip = golf_raw["last10DataChip"]
+scorecard = golf_raw["details"]
 
 
 def process_clubs(clubs):
@@ -93,19 +96,91 @@ def process_shots(shot_details):
 
 
 # Drive dispersion
-df1 = pd.DataFrame(last10drive.pop("shotDispersionDetails"))
-df1.columns = df1.columns.str.lower()
+def drive_dispersion(last10df):
+    df1 = pd.DataFrame(last10df.pop("shotDispersionDetails"))
+    df1.columns = df1.columns.str.lower()
 
-df1["shottime"] = pd.to_datetime(df1["shottime"], format="%Y-%m-%d %H:%M:%S")
+    df1["shottime"] = pd.to_datetime(df1["shottime"], format="%Y-%m-%d %H:%M:%S")
+    return df1
+
+
 ##
 
 
-print(df1)
+def process_last10_approach(last10):
+    # app_insight = last10.pop("approachInsight")
+    # dist_range_insights_df = pd.DataFrame(app_insight["distRangeInsights"])
+    # club_insights_df = pd.DataFrame(app_insight["clubInsights"])
+    shot_orientation_df = pd.DataFrame(last10.pop("shotOrientationDetail"))
+    shot_orientation_df.columns = shot_orientation_df.columns.str.lower()
+    return shot_orientation_df  # , shot_orientation_df, dist_range_insights_df, club_insights_df
 
 
-# df = process_clubs(clubs)
+# similar to drives and approach
+def process_last10_chip(last10):
+    shot_orientation_df = pd.DataFrame(last10.pop("shotOrientationDetail"))
+    shot_orientation_df.columns = shot_orientation_df.columns.str.lower()
+    return shot_orientation_df
+
+
+def process_holes(scorecard, course_snap):
+    # looks like: "544435434543444435", so the index is the hole # - 1
+    pars = course_snap["holePars"]
+    holes_df = pd.DataFrame(scorecard["holes"])
+    # add id and course name, course id as scalars for convenience
+    holes_df["scorecardId"] = scorecard["id"]
+    holes_df["courseName"] = course_snap["name"]
+    holes_df["courseGlobalId"] = course_snap["courseGlobalId"]
+    holes_df["par"] = holes_df["number"].apply(lambda x: int(pars[x - 1]))
+    holes_df["relative_to_par"] = holes_df["strokes"] - holes_df["par"]
+    return holes_df
+
+
+def process_scorecard(scorecards):
+    cards_df = pd.DataFrame()
+    courses_df = pd.DataFrame()
+    all_holes_df = pd.DataFrame()
+    for scorecard_container in scorecards:
+        course_snap = scorecard_container["courseSnapshots"][0]
+        course_snap_df = pd.DataFrame.from_dict(course_snap)
+        # only one of these
+        score_details = scorecard_container["scorecardDetails"][0]
+        score_stats = score_details["scorecardStats"]  # only one of these
+        name = course_snap_df["name"]
+        the_scorecard = score_details["scorecard"]
+        holes_df = process_holes(the_scorecard, course_snap)
+
+        score_df = pd.DataFrame.from_dict(the_scorecard)
+        score_df.drop(columns="holes")
+        # TODO: convert types for dates
+        for key, value in score_stats["round"].items():
+            # TODO: is there a better pandas way?  Getting an error on index missing
+            score_df[key] = value
+        # Construct our data frames
+        all_holes_df = pd.concat([all_holes_df, holes_df])
+        cards_df = pd.concat([cards_df, score_df])
+        courses_df = pd.concat([courses_df, course_snap_df])
+
+    courses_df = courses_df.drop_duplicates(subset=["courseGlobalId"])
+    return cards_df, courses_df, all_holes_df
+
+
+a, b, c = process_scorecard(scorecard)
+
+# TODO courses DF needs to have the tees column normalized, maybe? Or just keep it as json data
+
+print(a)
+print(b)
+print(c)
+# df = process_last10_chip(last10chip)
+# print(df)
+
+# a = process_last10_approach(last10approach)
+# # print(pd.DataFrame(a))
+# pprint(a)
+# # df = process_clubs(clubs)
 
 # conn = DataframeToBase("golf.db")
-# conn.create_table(df, "club_summary")
-# conn.insert_dataframe(df, "club_summary")
+# conn.create_table(df, "chipshots")
+# conn.insert_dataframe(df, "chipshots")
 # conn.close()

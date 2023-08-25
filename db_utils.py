@@ -29,7 +29,7 @@ class DataframeToBase:
             dataframe: The pandas dataframe to be inserted into the database.
             table_name: The name of the table to insert the dataframe into.
         """
-        dataframe.to_sql(table_name, self.connection, index=index, if_exists="replace")
+        dataframe.to_sql(table_name, self.connection, index=index, if_exists="append")
         self.connection.commit()
 
     def close(self):
