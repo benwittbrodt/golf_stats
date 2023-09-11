@@ -35,3 +35,12 @@ class DataframeToBase:
     def close(self):
         """Closes the connection to the database."""
         self.connection.close()
+
+    def from_db(self, table):
+        sql = f"select id from {table}"
+        self.connection.row_factory = lambda cursor, row: row[0]
+        c = self.connection.cursor()
+        db = c.execute(sql).fetchall()
+        # db = self.cursor.fetchall()
+
+        return db
