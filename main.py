@@ -2,7 +2,7 @@
 import json
 from pprint import pprint
 import pandas as pd
-from db_utils import DataframeToBase
+
 
 with open("golf-export.json") as data:
     golf_raw = json.load(data)

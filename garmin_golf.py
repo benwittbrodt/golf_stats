@@ -22,17 +22,6 @@ class GarminData:
         scorecard_summaries.columns = scorecard_summaries.columns.str.lower()
         return scorecard_summaries
 
-    def db_conn(self, db):
-        """
-        Creates database connection with given database file
-        """
-        return sqlite3.connect(db)
-
-    def get_id(self, conn):
-        sql = f"select id from scorecard_summary"
-        df = pd.read_sql_query(sql, conn)["id"].to_list()
-        return df
-
 
 class GarminToDB:
     """
@@ -42,18 +31,24 @@ class GarminToDB:
     def __init__(self, db_file):
         self.db_file = db_file
         self.conn = sqlite3.connect(self.db_file)
+        self.id_lists = {}
 
     def get_id(self, table):
+        """
+        Returns a list of ids, added to the id_lists for the given table. Used for appending data vs. overwriting
+        """
         sql = f"select id from {table}"
-        df = pd.read_sql_query(sql, self.conn)["id"].to_list()
-        return df
+        self.id_lists[table] = pd.read_sql_query(sql, self.conn)["id"].to_list()
+        return self.id_lists[table]
 
-    def filter(self):
+    def filter_df(self, new_data, table):
         """
-        t
+        Returns dataframe with the new data that should be appended to db
         """
-        # TODO need to get a filter for a newly processed dataframe using the id gathered
-        # df1 = sc2[~sc2['id'].isin(get_id())]
+        return new_data[~new_data["id"].isin(self.id_lists[table])]
 
     def db_append(self, df, table):
+        """
+        Appends data from input dataframe to designated table
+        """
         return df.to_sql(table, self.conn, index=False, if_exists="append")
