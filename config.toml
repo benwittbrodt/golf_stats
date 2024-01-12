@@ -1,0 +1,3 @@
+[folders]
+source_di_connect = '/Users/ben/projects/golf_stats/garmin_data/DI_CONNECT'
+db_target = '/Users/ben/projects/sqlite'
