@@ -5,7 +5,8 @@ import re
 import fitdecode
 import toml
 
-data = toml.load("config.toml")
+config = toml.load("config.toml")
+print(config)
 
 
 class GarminData:
